@@ -9,7 +9,8 @@ const ejsMate = require("ejs-mate"); //helps us to create templates or layout
 //so it will help us to create a template for that
 const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
-const {ListingSchema} = require("./schema.js");
+const {ListingSchema, reviewSchema} = require("./schema.js");
+const Review = require("./models/review");
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
@@ -49,6 +50,16 @@ const validateListing = (req, res, next) => {
     }
 };
 
+const validateReview = (req, res, next) => {
+    const { error } = reviewSchema.validate(req.body);
+    if (error) {
+        let errMsg = error.details.map(el => el.message).join(",");
+        throw new ExpressError(400, errMsg);
+    } else {
+        next();
+    }
+};
+
 
 //INDEX ROUTE
 app.get("/listings", wrapAsync(async (req, res) =>{
@@ -69,7 +80,7 @@ app.get("/listings/new", wrapAsync(async(req, res) =>{
 //Show route
 app.get("/listings/:id", wrapAsync(async (req, res) =>{
     let {id} = req.params;
-    const listing = await Listing.findById(id);
+    const listing = await Listing.findById(id).populate("reviews");
     res.render("listings/show.ejs", {listing});
 }));
 
@@ -108,9 +119,39 @@ app.put("/listings/:id", validateListing, wrapAsync( async(req, res) =>{
 app.delete("/listings/:id", wrapAsync(async(req, res) => {
     let {id} = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);
-    console.log("deletedListing");
+    console.log(deletedListing);
     res.redirect("/listings");
 }));
+
+//reviews
+//POST route
+app.post("/listings/:id/reviews", validateReview, wrapAsync(async(req, res) =>
+{
+    const listing = await Listing.findById(req.params.id);
+    let newReview = new Review(req.body.review);
+
+    listing.reviews.push(newReview);
+
+    await newReview.save();
+    await listing.save();
+
+    res.redirect(`/listings/${listing._id}`);
+}));
+
+//Delete Review route
+app.delete("/listings/:id/reviews/:reviewId",
+  wrapAsync(async (req, res) => {
+    const { id, reviewId } = req.params;
+
+    // Remove the review from the database
+    await Review.findByIdAndDelete(reviewId);
+
+    // Also remove the reference from the listing's reviews array
+    await Listing.findByIdAndUpdate(id, {$pull: {reviews: reviewId}});
+
+    res.redirect(`/listings/${id}`);
+  })
+);
 
 
 app.all("/*splat", (req, res, next) =>{
