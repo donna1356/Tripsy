@@ -35,6 +35,11 @@ router.get("/new", wrapAsync(async(req, res) =>{
 router.get("/:id", wrapAsync(async (req, res) =>{
     let {id} = req.params;
     const listing = await Listing.findById(id).populate("reviews");
+    if(!listing)
+    {
+        req.flash("error", "Listing you are requesting for does not exist");
+        return res.redirect("/listings");
+    }
     res.render("listings/show.ejs", {listing});
 }));
 
@@ -43,6 +48,7 @@ router.post("/", validateListing, wrapAsync( async(req, res) =>{
     //let {title, description, image, price, location, country} = req.body;
     const newListing = new Listing(req.body.listing); //creates new instace of Listing
     await newListing.save(); //saved to database
+    req.flash("success", "New Listing Added!");
     res.redirect("/listings");
      }));
 
@@ -52,6 +58,11 @@ router.post("/", validateListing, wrapAsync( async(req, res) =>{
 router.get("/:id/edit", wrapAsync(async (req, res) => {
     let {id} = req.params;
     const listing = await Listing.findById(id);
+    if(!listing)
+    {
+        req.flash("error", "Listing you are requesting for does not exist");
+        return res.redirect("/listings");
+    }
     res.render("listings/edit.ejs", {listing});
 }));
 
@@ -66,6 +77,7 @@ router.put("/:id", validateListing, wrapAsync( async(req, res) =>{
     //deconstruct javascript object which has all the parameters
     //deconstruct means to covert all the parameters to individual values
     //and will pass these values to updated values
+    req.flash("success", "Listing Edited!");
     res.redirect(`/listings/${id}`);
 }));
 
@@ -74,6 +86,7 @@ router.delete("/:id", wrapAsync(async(req, res) => {
     let {id} = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);
     console.log(deletedListing);
+    req.flash("success", "Listing Deleted!");
     res.redirect("/listings");
 }));
 
