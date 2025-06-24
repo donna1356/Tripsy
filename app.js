@@ -9,8 +9,12 @@ const ejsMate = require("ejs-mate"); //helps us to create templates or layout
 const ExpressError = require("./utils/ExpressError.js");
 const listings = require("./routes/listing.js");
 const reviews = require("./routes/review.js");
+const users = require("./routes/user.js");
 const session = require("express-session");
 const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js");
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
@@ -54,6 +58,18 @@ app.get("/", (req, res)=>{
 app.use(session(sessionOptions));
 app.use(flash());
 
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new 
+    LocalStrategy(User.authenticate()));//this lines means
+//every user should be authenticated using local stratigey and
+//the method used to authenthicate is authenticate(), which is a static method 
+//provided by mongoose
+
+passport.serializeUser(User.serializeUser());//to store all info related to the user in the session
+passport.deserializeUser(User.deserializeUser());
+
+
 app.use((req, res, next) => {
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
@@ -62,6 +78,8 @@ app.use((req, res, next) => {
 
 app.use("/listings", listings);
 app.use("/listings/:id/reviews", reviews); //parent route
+
+app.use("/", users);
 
 app.all("/*splat", (req, res, next) =>{
     next(new ExpressError(404, "Page Not Found!!"));
