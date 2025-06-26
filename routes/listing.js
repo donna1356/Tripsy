@@ -4,16 +4,8 @@ const wrapAsync = require("../utils/wrapAsync.js");
 const ExpressError = require("../utils/ExpressError.js");
 const {ListingSchema} = require("../schema.js");
 const Listing = require("../models/listing");
+const {isLoggedIn, isOwner, validateListing} = require("../middleware.js");
 
-const validateListing = (req, res, next) => {
-    const { error } = ListingSchema.validate(req.body);
-    if (error) {
-        let errMsg = error.details.map(el => el.message).join(",");
-        throw new ExpressError(400, errMsg);
-    } else {
-        next();
-    }
-};
 
 //INDEX ROUTE
 router.get("/", wrapAsync(async (req, res) =>{
@@ -25,7 +17,7 @@ router.get("/", wrapAsync(async (req, res) =>{
 // when you submit the form, second request will go to create route, which will be POST request
 // /listings, to create a new listing
 //new route
-router.get("/new", wrapAsync(async(req, res) =>{
+router.get("/new", isLoggedIn, wrapAsync(async(req, res) =>{
     res.render("listings/new.ejs");
 }));
 
@@ -34,7 +26,12 @@ router.get("/new", wrapAsync(async(req, res) =>{
 //Show route
 router.get("/:id", wrapAsync(async (req, res) =>{
     let {id} = req.params;
-    const listing = await Listing.findById(id).populate("reviews");
+    const listing = await Listing.findById(id)
+    .populate({path: "reviews",
+         populate: { path: "author"},
+        })
+        .populate("owner");
+    console.log(listing);
     if(!listing)
     {
         req.flash("error", "Listing you are requesting for does not exist");
@@ -47,7 +44,9 @@ router.get("/:id", wrapAsync(async (req, res) =>{
 router.post("/", validateListing, wrapAsync( async(req, res) =>{
     //let {title, description, image, price, location, country} = req.body;
     const newListing = new Listing(req.body.listing); //creates new instace of Listing
+    newListing.owner = req.user._id;
     await newListing.save(); //saved to database
+    console.log(newListing);
     req.flash("success", "New Listing Added!");
     res.redirect("/listings");
      }));
@@ -55,7 +54,7 @@ router.post("/", validateListing, wrapAsync( async(req, res) =>{
 //GET request at /listings/:id/edit, this will render a form
 //on submitting the form, it will generate a PUT request to /listings/:id
 //Edit route
-router.get("/:id/edit", wrapAsync(async (req, res) => {
+router.get("/:id/edit", isLoggedIn, isOwner, wrapAsync(async (req, res) => {
     let {id} = req.params;
     const listing = await Listing.findById(id);
     if(!listing)
@@ -67,7 +66,7 @@ router.get("/:id/edit", wrapAsync(async (req, res) => {
 }));
 
 //Update route
-router.put("/:id", validateListing, wrapAsync( async(req, res) =>{
+router.put("/:id", isLoggedIn, isOwner, validateListing, wrapAsync( async(req, res) =>{
     if(!req.body.listing)
     {
         throw new ExpressError(404, "Send valid data for listing");
@@ -82,7 +81,7 @@ router.put("/:id", validateListing, wrapAsync( async(req, res) =>{
 }));
 
 //delete route
-router.delete("/:id", wrapAsync(async(req, res) => {
+router.delete("/:id", isLoggedIn, isOwner, wrapAsync(async(req, res) => {
     let {id} = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);
     console.log(deletedListing);
