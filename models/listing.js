@@ -36,6 +36,11 @@ const ListingSchema = new Schema({
         ref: "Review",
       },
     ],
+
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 });
 
 //this is a post middleware
