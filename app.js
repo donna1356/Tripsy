@@ -1,3 +1,8 @@
+if(process.env.NODE_ENV != "production") {
+    require("dotenv").config();
+};
+
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -15,6 +20,7 @@ const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
+
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
@@ -49,7 +55,6 @@ const sessionOptions = {
     },
 };
 
-
 app.get("/", (req, res)=>{
     res.send("Hi, I am root");
 });  
@@ -65,6 +70,7 @@ passport.use(new
 //every user should be authenticated using local stratigey and
 //the method used to authenthicate is authenticate(), which is a static method 
 //provided by mongoose
+
 
 passport.serializeUser(User.serializeUser());//to store all info related to the user in the session
 passport.deserializeUser(User.deserializeUser());

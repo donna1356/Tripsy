@@ -1,24 +1,31 @@
 const Listing = require("./models/listing");
 const Review = require("./models/review");
 const ExpressError = require("./utils/ExpressError.js");
-const {listingSchema} = require("./schema.js");
+const {ListingSchema} = require("./schema.js");
 
 module.exports.isLoggedIn = (req, res, next) => {
-    if(!req.isAuthenticated()) {
+   if (!req.isAuthenticated()) {
+    if (req.method === "GET") {
         req.session.redirectUrl = req.originalUrl;
-        req.flash("error", "You must be logged in!");
-        return res.redirect("/login");
+    } else if (req.method === "POST") {
+        req.session.redirectUrl = "/listings"; // Safe redirect to form again
     }
-    next();
+
+    req.flash("error", "You must be logged in!");
+    return res.redirect("/login");
+}
+next();
+
 }
 
 module.exports.saveRedirectUrl = (req, res, next) => {
-    if(req.session.redirectUrl)
-    {
-        res.locals.redirectUrl = req.session.redirectUrl;
+    if (req.session && !req.session.redirectUrl && req.originalUrl !== '/login') {
+        req.session.redirectUrl = req.originalUrl;
     }
+    res.locals.redirectUrl = req.session.redirectUrl; // save it to res.locals
     next();
-}
+};
+
 module.exports.isOwner = async(req, res, next) => {
     let { id } = req.params;
     let listing = await Listing.findById(id);
