@@ -44,13 +44,30 @@ The goal is to help users explore and share travel experiences — all in one be
 
 ---
 
-## 🖥️ Refer for pictures
+## 🖥️ Pictures
 
 ```
-![Homepage](public/images/homepage.png)
-![Listing Page](public/images/listing.png)
-![Map](public/images/map.png)
-![Payment Gateway](public/images/payment.png)
+## 🖥️ Screenshots
+
+### 🏠 Homepage
+[![Homepage](public/images/homepage.png)](public/images/homepage.png)
+
+---
+
+### 📄 Listing Page
+[![Listing Page](public/images/listing.png)](public/images/listing.png)
+
+---
+
+### 🗺️ Map View
+[![Map](public/images/map.png)](public/images/map.png)
+
+---
+
+### 💳 Payment Gateway
+[![Payment Gateway](public/images/payment.png)](public/images/payment.png)
+
+
 ```
 
 ---
