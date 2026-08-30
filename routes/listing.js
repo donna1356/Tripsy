@@ -13,6 +13,9 @@ route("/")
 .get( wrapAsync(listingController.index)) //INDEX ROUTE
 .post(isLoggedIn, upload.single("listing[image]"), validateListing, wrapAsync(listingController.createListing)); //create route
 
+// Search route
+router.get("/search", wrapAsync(listingController.searchListings));
+
 
 
 //GET /listing/new -> this will open a form for us where we create a new listing

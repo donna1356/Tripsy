@@ -2,11 +2,45 @@ const ExpressError = require("../utils/ExpressError.js");
 const Listing = require("../models/listing");
 const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
 const mapToken = process.env.MAP_TOKEN;
-const geocodingClient = mbxGeocoding({ accessToken: mapToken });
+let geocodingClient = null;
+
+if (mapToken && mapToken !== "your_mapbox_token_here") {
+  try {
+    geocodingClient = mbxGeocoding({ accessToken: mapToken });
+  } catch (error) {
+    console.warn("Failed to initialize Mapbox geocoding client:", error.message);
+  }
+}
 
 module.exports.index = async (req, res) => {
   const allListings = await Listing.find({});
   res.render("listings/index.ejs", { allListings });
+};
+
+module.exports.searchListings = async (req, res) => {
+  const { query } = req.query;
+  
+  if (!query) {
+    return res.redirect("/listings");
+  }
+
+  const searchTerms = query.toLowerCase().trim().split(/\s+/);
+  
+  const searchResults = await Listing.find({
+    $or: [
+      { location: { $regex: query, $options: 'i' } },
+      { country: { $regex: query, $options: 'i' } },
+      { title: { $regex: query, $options: 'i' } },
+      { tags: { $in: searchTerms } },
+      { description: { $regex: query, $options: 'i' } }
+    ]
+  }).populate("owner");
+
+  res.render("listings/search.ejs", { 
+    searchResults, 
+    query,
+    count: searchResults.length 
+  });
 };
 
 module.exports.newForm = async (req, res) => {
@@ -34,16 +68,38 @@ module.exports.showListing = async (req, res) => {
 };
 
 module.exports.createListing = async (req, res, next) => {
-  const response = await geocodingClient.forwardGeocode({
-    query: req.body.listing.location,
-    limit: 1,
-  }).send();
-
-  const newListing = new Listing(req.body.listing);
+  const listingData = { ...req.body.listing };
+  
+  // Process tags if provided
+  if (listingData.tags) {
+    listingData.tags = listingData.tags.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0);
+  }
+  
+  const newListing = new Listing(listingData);
   newListing.owner = req.user._id;
 
-  if (response.body.features.length > 0) {
-    newListing.geometry = response.body.features[0].geometry;
+  if (geocodingClient) {
+    try {
+      const response = await geocodingClient.forwardGeocode({
+        query: req.body.listing.location,
+        limit: 1,
+      }).send();
+
+      if (response.body.features.length > 0) {
+        newListing.geometry = response.body.features[0].geometry;
+      } else {
+        newListing.geometry = {
+          type: "Point",
+          coordinates: [0, 0]
+        };
+      }
+    } catch (error) {
+      console.warn("Geocoding failed:", error.message);
+      newListing.geometry = {
+        type: "Point",
+        coordinates: [0, 0]
+      };
+    }
   } else {
     newListing.geometry = {
       type: "Point",
@@ -75,7 +131,14 @@ module.exports.editForm = async (req, res) => {
 
 module.exports.updateListing = async (req, res) => {
   let { id } = req.params;
-  let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+  const listingData = { ...req.body.listing };
+  
+  // Process tags if provided
+  if (listingData.tags) {
+    listingData.tags = listingData.tags.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0);
+  }
+  
+  let listing = await Listing.findByIdAndUpdate(id, listingData);
   if (req.file) {
     listing.image = {
       url: req.file.path,
