@@ -63,13 +63,23 @@
 
     <div class="mb-3">
       <label for="location" class="form-label">Location</label>
-      <input 
-      name="listing[location]" 
-      value="<%=listing.location%>" 
-      type="text" 
+      <input
+      name="listing[location]"
+      value="<%=listing.location%>"
+      type="text"
       class="form-control"
       required>
     <div class="invalid-feedback">Location should be valid</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="tags" class="form-label">Tags (comma separated)</label>
+      <input name="listing[tags]"
+       value="<%= listing.tags ? listing.tags.join(', ') : '' %>"
+       placeholder="e.g., mountain, beach, temple, forest, city"
+       type="text"
+       class="form-control"/>
+       <div class="form-text">Add relevant tags like: mountain, beach, temple, forest, city, lake, river, etc.</div>
     </div>
 
     <br /><br>

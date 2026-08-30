@@ -17,6 +17,7 @@ const ListingSchema = new Schema({
     price : Number,
     location : String,
     country : String,
+    tags: [String],
 
     reviews: [
       {

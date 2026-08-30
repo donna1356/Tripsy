@@ -1,4 +1,5 @@
 <% layout("layouts/boilerplate") %>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
   const mapToken = "<%= process.env.MAP_TOKEN %>";
   const listing = <%- JSON.stringify(listing) %>;
@@ -44,6 +45,21 @@
       >
         <button class="btn btn-dark offset-5">Delete</button>
       </form>
+    </div>
+  <% } %>
+
+  <!-- Payment Button -->
+  <% if (currUser && !currUser._id.equals(listing.owner._id)) { %>
+    <div class="col-6 offset-3 mb-3">
+      <button 
+        id="pay-button" 
+        class="btn btn-primary btn-lg w-100"
+        data-listing-id="<%= listing._id %>"
+        data-listing-title="<%= listing.title %>"
+        data-listing-price="<%= listing.price %>"
+      >
+        Book Now - &#8377; <%= listing.price.toLocaleString("en-IN") %>
+      </button>
     </div>
   <% } %>
 
@@ -117,4 +133,84 @@
     </div>
   </div>
 </div>
+
 <script defer src="/js/map.js"></script>
+<script>
+  document.getElementById('pay-button').addEventListener('click', async function(e) {
+    const listingId = this.getAttribute('data-listing-id');
+    const listingTitle = this.getAttribute('data-listing-title');
+    const listingPrice = this.getAttribute('data-listing-price');
+
+    try {
+      const response = await fetch(`/listings/${listingId}/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const orderData = await response.json();
+
+      if (!orderData.order_id) {
+        alert('Failed to create payment order');
+        return;
+      }
+
+      const options = {
+        key: orderData.key_id,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Tripsy',
+        description: `Booking for ${listingTitle}`,
+        order_id: orderData.order_id,
+        handler: async function(response) {
+          const verifyResponse = await fetch('/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              listing_id: listingId
+            })
+          });
+
+          const verifyData = await verifyResponse.json();
+
+          if (verifyData.success) {
+            alert('Payment successful! Your booking is confirmed.');
+            window.location.href = verifyData.redirect_url;
+          } else {
+            alert('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: '<%= currUser ? currUser.username : "" %>',
+          email: '<%= currUser ? currUser.email : "" %>'
+        },
+        theme: {
+          color: '#3399cc'
+        },
+        modal: {
+          ondismiss: function() {
+            console.log('Checkout form closed');
+          }
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
+
+      rzp.on('payment.failed', function(response) {
+        alert('Payment failed. Please try again.');
+        console.error('Payment failed:', response.error);
+      });
+
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Something went wrong. Please try again.');
+    }
+  });
+</script>
