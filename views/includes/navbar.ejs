@@ -13,7 +13,13 @@
         <a class="nav-link text-white" href="/listings/new">Add Listing</a>
       </div>
 
-      <div class="navbar-nav">
+      <!-- Search Form -->
+      <form class="d-flex ms-3" action="/listings/search" method="GET">
+        <input class="form-control me-2" type="search" name="query" placeholder="Search by location, tags..." aria-label="Search">
+        <button class="btn btn-outline-light" type="submit">Search</button>
+      </form>
+
+      <div class="navbar-nav ms-2">
         <% if(!currUser) { %>
         <a class="nav-link" href="/signup">SignUp</a>
         <a class="nav-link" href="/login">Login</a>

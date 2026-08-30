@@ -15,6 +15,7 @@ const ExpressError = require("./utils/ExpressError.js");
 const listings = require("./routes/listing.js");
 const reviews = require("./routes/review.js");
 const users = require("./routes/user.js");
+const payments = require("./routes/payment.js");
 const session = require("express-session");
 const flash = require("connect-flash");
 const passport = require("passport");
@@ -87,6 +88,7 @@ app.use("/listings", listings);
 app.use("/listings/:id/reviews", reviews); //parent route
 
 app.use("/", users);
+app.use("/", payments);
 
 app.all("/*splat", (req, res, next) =>{
     next(new ExpressError(404, "Page Not Found!!"));
